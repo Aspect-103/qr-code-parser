@@ -1,19 +1,20 @@
 import pygame
 import Utils
 
+from res.Fonts import NORMAL_FONT
+
 pygame.font.init()
 
 COLOR_INCOMPLETE = pygame.Color((255, 0, 0))
 COLOR_ACTIVE = pygame.Color('dodgerblue2')
 COLOR_COMPLETED = pygame.Color((0, 255, 0))
-DEFAULT_FONT = pygame.font.Font("fonts/Diavlo_BOLD_II_37.otf", 22)
 FONT_COLOR = pygame.Color("black")
 BG_COLOR = pygame.Color("white")
 ALT_OUTLINE_COLOR = pygame.Color("black")
 OUTLINE_WIDTH = 3
 
 class InputBox:
-    def __init__(self, x, y, width, height, text='', completable=True, font = DEFAULT_FONT):
+    def __init__(self, x, y, width, height, text='', completable=True, font = NORMAL_FONT):
         self.default_width = width
         self.default_height = height
         self.background = pygame.Surface((width-2*OUTLINE_WIDTH, height-2*OUTLINE_WIDTH))

@@ -1,4 +1,4 @@
-import ConfigManager
+import config.ConfigManager as ConfigManager
 
 # Strip comma from end if necessary
 def strip_commas(full_str:str) -> str:

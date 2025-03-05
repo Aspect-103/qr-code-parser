@@ -11,13 +11,15 @@ import Processor
 from components.InputBox import InputBox
 from components.Button import Button
 import Utils
-import ConfigManager
+import config.ConfigManager as ConfigManager
 import api.RequestHandler as RequestHandler
 import time
-import os
+
+from res.Fonts import TITLE_FONT, NORMAL_FONT, SMALL_FONT, FONT_COLOR
 
 pygame.init()
 ConfigManager.load_config()
+
 
 # ----------------- CONSTANTS -----------------
 
@@ -54,12 +56,6 @@ else:
     tkinter.messagebox.askokcancel(title=APP_NAME, message="Please select a directory that contains the necessary files (eventList.csv, setupList.csv, qrStrings.txt).")
     pygame.quit()
     exit()
-
-# ----------------- FONT DETAILS -----------------
-TITLE_FONT = pygame.font.Font("fonts/Diavlo_BOLD_II_37.otf", 32) # Title-size font
-NORMAL_FONT = pygame.font.Font("fonts/ChakraPetch-Bold.ttf", 22) # normal text size font
-SMALL_FONT = pygame.font.Font("fonts/Sintony-Bold.ttf", 13) # small text size font
-FONT_COLOR = pygame.Color((255,150,0))
 
 # ----------------- SCREEN ELEMENTS/SURFACES -----------------
 pygame.display.set_caption(APP_NAME)

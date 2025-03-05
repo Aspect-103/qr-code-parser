@@ -1,14 +1,13 @@
 import pygame
-
+from res.Fonts import NORMAL_FONT
 pygame.font.init()
 
 COLOR_ACTIVE = pygame.Color((255,120,0))
 COLOR_HOVER = pygame.Color((255,140,0))
 COLOR_DEFAULT = pygame.Color((255,150,0))
-DEFAULT_FONT = pygame.font.Font("fonts/Diavlo_BOLD_II_37.otf", 22)
 
 class Button:
-    def __init__(self, name:str, x, y, width, height, text='', font = DEFAULT_FONT):
+    def __init__(self, name:str, x, y, width, height, text='', font = NORMAL_FONT):
         # name allows program to distinguish each button from the others
         self.name = name
         self.x = x
