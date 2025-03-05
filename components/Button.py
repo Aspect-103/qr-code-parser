@@ -14,7 +14,7 @@ class Button:
         self.y = y
         self.width = width
         self.height = height
-        self.font = DEFAULT_FONT
+        self.font = font
         self.color = COLOR_DEFAULT
         self.rect = pygame.Rect(x, y, width, height)
         self.text = text
