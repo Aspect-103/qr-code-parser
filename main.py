@@ -32,6 +32,8 @@ QR_STRING = "TeamNumber, MatchNumber, AlliancePartner1, AlliancePartner2, Allian
 APP_BG_COLOR = pygame.Color((51,51,51))
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
+FPS = 30
+FPS_CLOCK = pygame.time.Clock()
 
 # ----------------- DISPLAY SURFACE -----------------
 surface = pygame.display.set_mode([SCREEN_WIDTH,SCREEN_HEIGHT])
@@ -98,6 +100,9 @@ input_boxes = team_number_boxes + [match_num_input_box]
 # Reminder to add edit_button and load_teams_button back, removed it for competition because of bugs
 buttons = [clear_button, edit_button, load_teams_button, get_teams_button, reload_config_button]
 
+focused = True
+first_open = True
+
 # ----------------- VIDEO CAPTURE -----------------
 # 0 Is the built in camera, change to 1 if using webcam
 cap = cv2.VideoCapture(0)
@@ -112,17 +117,86 @@ cap.set(cv2.CAP_PROP_FPS, 60)
 # ----------------- "GAME" LOOP -----------------
 match_number = 1
 last_scan_time = 0
+qr_string = None
+
+def get_teams():
+    event_key = ConfigManager.get_config()["event_key"]
+    event_data = RequestHandler.get_stored_match_data(event_key)
+    if event_data is None:
+        stored_event_key = RequestHandler.get_stored_event_key()
+        tkinter.messagebox.showerror(title=APP_NAME, message=f"Event key and event data don't match. \n" \
+                                        f"Config event key: {event_key}.\n" \
+                                        f"Stored event data: {stored_event_key} \n" \
+                                        f"If you have access to the Internet, press the 'Load Teams' button to get data for the desired competition. ")
+        return
+    teams_in_match = RequestHandler.get_teams_in_match(event_data, match_number, RequestHandler.MatchTypes.QUALIFICATION)
+    if teams_in_match is None:
+        tkinter.messagebox.showerror(title=APP_NAME, message="No teams exist for that match.")
+        return
+    for i in range(len(team_number_boxes)):
+        team_number_boxes[i].completed = False
+        if i < 3:
+            team_number_boxes[i].text = teams_in_match["red"][i]
+        else:
+            team_number_boxes[i].text = teams_in_match["blue"][i-3]
+    ConfigManager.set_config("event_key", event_key)
+
+def clear_team_number_boxes():
+    for box in team_number_boxes:
+        box.text = ''
+        box.completed = False
+
+def load_teams():
+    event_key = ConfigManager.get_config()["event_key"]
+    if event_key is None:
+        event_key = tkinter.simpledialog.askstring(title=APP_NAME, prompt="Please enter the event key (including the year)")
+    else:
+        yesno = tkinter.messagebox.askyesno(title=APP_NAME, message=f"Would you like to use the event key {event_key} again?")
+        if yesno == False:
+            event_key = tkinter.simpledialog.askstring(title=APP_NAME, prompt="Please enter the event key (including the year)")
+            if event_key is None:
+                return
+    try:
+        match_data = RequestHandler.load_match_data_from_api(event_key)
+    except Exception as e:
+        print(e)
+        tkinter.messagebox.showerror(title=APP_NAME, message=f"Unable to connect. Make sure you have a stable internet connection.")
+        return
+    if match_data is None:
+        tkinter.messagebox.showerror(title=APP_NAME, message=f"The event key '{event_key}' is invalid.")
+        return
+    try:
+        RequestHandler.store_matches(match_data)
+        ConfigManager.set_config("event_key", event_key)
+    except IndexError:
+        tkinter.messagebox.showerror(title=APP_NAME, message="Match data doesn't seem to exist for the given event. \n"\
+                                        "This may mean that the match schedule has not been released on TBA. Please try again later")
+    else:
+        tkinter.messagebox.showinfo(title=APP_NAME, message=f"Data for event {event_key} has been fetched and stored.")
+
 
 while True:
     surface.fill(APP_BG_COLOR)
 
+    # On first open, if there is a previous string, autofill the ui with information for 
+    # the next logical match (i.e. increment match number by one from last qr string and autofill team numbers)
+    if first_open:
+        first_open = False
+        last_string = Processor.get_last_full_string()
+        if last_string != "":
+            match_number = int(Processor.get_match_number(Processor.get_last_full_string())) + 1
+            match_num_input_box.text = str(match_number)
+            get_teams_button.active = True # This will trigger the autofill
+
+    frame = np.array([])
     # Get frame from video
-    success, frame = cap.read()
-    if not success:
-        break
+    if focused:
+        success, frame = cap.read()
+        if not success:
+            break
  
     # Process Frame - Detect and decode QR Code from frame
-    decoded_info = decode(frame)
+    decoded_info = decode(frame) if frame.size > 0 else []
     # print(decoded_info)
 
     if (len(decoded_info) > 1): # Don't want to scan two QR codes at once
@@ -173,13 +247,14 @@ while True:
     # ----------------- CREATING WEBCAM SURFACE -----------------
              
     # Flip image because the frames appeared inverted by default
-    frame = np.fliplr(frame)
-    frame = np.rot90(frame)
+    if focused:
+        frame = np.fliplr(frame)
+        frame = np.rot90(frame)
 
-    # The capture uses BGR colors and PyGame needs RGB
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        # The capture uses BGR colors and PyGame needs RGB
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    webcam_surf = pygame.surfarray.make_surface(frame)
+        webcam_surf = pygame.surfarray.make_surface(frame)
 
     # ----------------- EVENT LISTENERS -----------------
 
@@ -189,6 +264,9 @@ while True:
             ConfigManager.write_config()
             pygame.quit()
             exit()
+        if event.type == pygame.ACTIVEEVENT:
+            if event.state == 2: # means focus changed
+                focused = event.gain # 1 = focus gained, 0 = focus lost
         if event.type == pygame.KEYDOWN:
             # press TAB or ENTER
             if event.key == pygame.K_TAB or event.key == pygame.K_RETURN:
@@ -214,68 +292,24 @@ while True:
             # CLEAR BUTTON
             if button.name == "clear" and button.active:
                 button.active = False
-                for box in team_number_boxes:
-                    box.text = ''
-                    box.completed = False
+                clear_team_number_boxes()
 
             # EDIT BUTTON
             if button.name == "edit" and button.active:
-                edit_prompt = tkinter.simpledialog.askstring(title=APP_NAME, prompt='Edit the string and click OK.', initialvalue=qr_string)
-                if edit_prompt != None:
-                    Processor.replace_last_entry(edit_prompt)
-                    button.active = False
+                if qr_string == None:
+                    tkinter.messagebox.showerror(title=APP_NAME, message="No QR code has been scanned!")
+                else:
+                    edit_prompt = tkinter.simpledialog.askstring(title=APP_NAME, prompt='Edit the string and click OK.', initialvalue=qr_string)
+                    if edit_prompt != None:
+                        Processor.replace_last_entry(edit_prompt)
+                        button.active = False
             if button.name == "load_teams" and button.active:
                 button.active = False
-                event_key = ConfigManager.get_config()["event_key"]
-                if event_key is None:
-                    event_key = tkinter.simpledialog.askstring(title=APP_NAME, prompt="Please enter the event key (including the year)")
-                else:
-                    yesno = tkinter.messagebox.askyesno(title=APP_NAME, message=f"Would you like to use the event key {event_key} again?")
-                    if yesno == False:
-                        event_key = tkinter.simpledialog.askstring(title=APP_NAME, prompt="Please enter the event key (including the year)")
-                        if event_key is None:
-                            break
-                try:
-                    match_data = RequestHandler.load_match_data_from_api(event_key)
-                except Exception as e:
-                    print(e)
-                    tkinter.messagebox.showerror(title=APP_NAME, message=f"Unable to connect. Make sure you have a stable internet connection.")
-                    break
-                if match_data is None:
-                    tkinter.messagebox.showerror(title=APP_NAME, message=f"The event key '{event_key}' is invalid.")
-                    break
-                try:
-                    RequestHandler.store_matches(match_data)
-                    ConfigManager.set_config("event_key", event_key)
-                except IndexError:
-                    tkinter.messagebox.showerror(title=APP_NAME, message="Match data doesn't seem to exist for the given event. \n"\
-                                                 "This may mean that the match schedule has not been released on TBA. Please try again later")
-                else:
-                    tkinter.messagebox.showinfo(title=APP_NAME, message=f"Data for event {event_key} has been fetched and stored.")
-
+                load_teams()
             # GET TEAMS BUTTON
             if button.name == "get_teams" and button.active:
                 button.active = False
-                event_key = ConfigManager.get_config()["event_key"]
-                event_data = RequestHandler.get_stored_match_data(event_key)
-                if event_data is None:
-                    stored_event_key = RequestHandler.get_stored_event_key()
-                    tkinter.messagebox.showerror(title=APP_NAME, message=f"Event key and event data don't match. \n" \
-                                                    f"Config event key: {event_key}.\n" \
-                                                    f"Stored event data: {stored_event_key} \n" \
-                                                    f"If you have access to the Internet, press the 'Load Teams' button to get data for the desired competition. ")
-                    break
-                teams_in_match = RequestHandler.get_teams_in_match(event_data, match_number, RequestHandler.MatchTypes.QUALIFICATION)
-                if teams_in_match is None:
-                    tkinter.messagebox.showerror(title=APP_NAME, message="No teams exist for that match.")
-                    break
-                for i in range(len(team_number_boxes)):
-                    team_number_boxes[i].completed = False
-                    if i < 3:
-                        team_number_boxes[i].text = teams_in_match["red"][i]
-                    else:
-                        team_number_boxes[i].text = teams_in_match["blue"][i-3]
-                ConfigManager.set_config("event_key", event_key)
+                get_teams()
             
             # RELOAD CONFIG BUTTON - Will overwrite file directory in config stored in memory (file won't be updated with new dir upon close)
             # If you make changes to the file while the program is running, you must reload config for it to update in memory
@@ -286,6 +320,8 @@ while True:
                                                + "Press 'Yes' to continue.", icon=tkinter.messagebox.WARNING)
                 if warning:
                     ConfigManager.load_config() # Loads config from config.yml into memory
+        FPS_CLOCK.tick(FPS)
+
     # ----------------- DISPLAY (BLIT) ELEMENTS ON SCREEN -----------------
     
     count_completed = 0
@@ -308,9 +344,11 @@ while True:
             box.text = ''
             box.completed = False
             match_num_input_box.text = str(num + 1)
+            get_teams()
 
     # Show the webcam capture surface!
-    surface.blit(webcam_surf, (20 , SCREEN_HEIGHT / 2 - webcam_surf.get_height() / 2))
+    if focused:
+        surface.blit(webcam_surf, (20 , SCREEN_HEIGHT / 2 - webcam_surf.get_height() / 2))
     # Show title and instructions
     surface.blit(title_surface, (SCREEN_WIDTH / 2 - title_surface.get_width() / 2, 20))
     surface.blit(match_num_text_surf, (match_num_input_box.rect.x - match_num_text_surf.get_width(), match_num_input_box.rect.y + match_num_input_box.rect.height/2))
