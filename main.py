@@ -24,11 +24,11 @@ ConfigManager.load_config()
 # ----------------- CONSTANTS -----------------
 
 APP_NAME = "QR Code Parser - Mercury 1089"
-QR_STRING = "TeamNumber, MatchNumber, AlliancePartner1, AlliancePartner2, AllianceColor, Preload, NoShow, FellOver, Leave, Defense, Park, Hang, " \
-    "AUTON, CORAL, L4ScoredCoral, L3ScoredCoral, L2ScoredCoral, L1ScoredCoral, L4MissedCoral, L3MissedCoral, L2MissedCoral, L1MissedCoral, PickedUpCoral, " \
-        "ALGAE, L3RemovedAlgae, L2RemovedAlgae, L3FailedAlgae, L2FailedAlgae, ScoredProcessor, MissedProcessor, ScoredNet, MissedNet, PickedUpAlgae, "\
-    "TELEOP, CORAL, L4ScoredCoral, L3ScoredCoral, L2ScoredCoral, L1ScoredCoral, L4MissedCoral, L3MissedCoral, L2MissedCoral, L1MissedCoral, PickedUpCoral, " \
-        "ALGAE, L3RemovedAlgae, L2RemovedAlgae, L3FailedAlgae, L2FailedAlgae, ScoredProcessor, MissedProcessor, ScoredNet, MissedNet, PickedUpAlgae, ScouterName"
+QR_STRING = "Scouter, Team, Match, Alliance, NoShow, Preload, Fellover/Died-A, " \
+    "A-Collecting, A-Ferrying, A-Missed, A-StartLevel, A-StopLevel, A-AttemptedClimb, A-SuccessfulClimbed, A-ClimbLocation, " \
+    "T-Collecting, T-Ferrying, T-Missed, T-StartLevel, T-StopLevel, T-AttemptedClimb, T-SuccessfulClimbed, T-ClimbLocation, " \
+    "E-Collecting, E-Ferrying, E-Missed, E-StartLevel, E-StopLevel, E-AttemptedClimb, E-SuccessfulClimbed, E-ClimbLocation, " \
+    "C-Park, C-Hang, C-Barge"
 APP_BG_COLOR = pygame.Color((51,51,51))
 SCREEN_WIDTH = 1280
 SCREEN_HEIGHT = 720
@@ -46,7 +46,7 @@ if result == tkinter.messagebox.YES:
 else:
     Tk().withdraw() # we don't want a full GUI, so keep the root window from appearing
     # show an "Open" dialog box and return the path to the selected file
-    STRAT_FOLDER = "C:\\Users\\Mercury1089\\Desktop\\Strategy\\2025 Reefscape"
+    STRAT_FOLDER = "C:\\Users\\Mercury1089\\Desktop\\Strategy\\2026 ReBuilt"
     dir = tkinter.filedialog.askdirectory(initialdir=STRAT_FOLDER, title="Please select the directory that contains eventList, setupList, and qr_strings")
 QR_STRINGS_PATH = Utils.find_files("qrStrings.txt", dir)
 

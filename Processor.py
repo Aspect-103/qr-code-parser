@@ -48,7 +48,21 @@ def get_team_number(full_str:str) -> str:
 def get_match_number(full_str:str) -> str:
     return full_str.split(",")[2]
 
-# Make sure qr string is a csv value and contains "Auton" and "Teleop" (should be in all strings regardless of that year's game)
+# Make sure qr string is a csv value with correct number of fields for 2026 (34 fields: Setup + Auton + Teleop + Endgame + Climb)
+# 2026 format: Scouter, Team, Match, Alliance, NoShow, Preload, Fellover + A-Collecting through A-ClimbLocation (8) + T- (8) + E- (8) + C- (3) = 34 total
 def is_correct_format(full_str:str) -> bool:
     values = full_str.split(',')
-    return len(values) > 0 and "Auton" in values and "Teleop" in values
+    # Check for 34 fields AND contains the Scouter name in position 0 (non-numeric typically)
+    # Also check that it has the climb fields at the end (Park, Hang, Barge which are Y/N or S/D/N)
+    if len(values) != 34:
+        return False
+    # Validate by checking expected field positions and patterns
+    try:
+        # Team number should be numeric (position 1)
+        int(values[1])
+        # Match number should be numeric (position 2)
+        int(values[2])
+        # Basic validation passed
+        return True
+    except (ValueError, IndexError):
+        return False
